@@ -1,26 +1,47 @@
-# wfc-natneg
+# Wii/DS NAT Negotiation Server
 
-Independent OpenPak Wii/DS protocol service: NAT negotiation UDP sessions; QR2 receives negotiation results.
-Own repository, binary, image and release; AGPL-3.0, derived from WiiLink WFC.
+OpenPak's Wii/DS NAT Negotiation Server.
 
-Internal HTTP defaults to WFC_HTTP_ADDR=:20204. GET /healthz is unauthenticated;
-protocol/internal paths require WFC_INTERNAL_KEY. Console HTTP reaches this owner
-through wfc-nas; TCP/UDP ports belong directly to their protocol's container.
-Runtime frontend/backend net/rpc endpoints stay on loopback inside each TCP
-service container. Restarting another protocol does not restart these sockets.
+| | |
+| --- | --- |
+| Network | Wii, DS |
+| Role | NAT negotiation UDP sessions; QR2 receives negotiation results |
+| Depends on | [`wfc-qr2`](https://github.com/openpak/wfc-qr2) (`WFC_QR2_URL`) |
+| Image | `ghcr.io/openpak/wfc-natneg` |
+| Based on | WiiLink WFC (AGPL-3.0) |
+| Licence | AGPL-3.0-only |
 
-Use example.env with the existing WFC database and shared WFC_TOKEN_KEY_FILE.
-Never rotate token material or change profile IDs during ordinary service releases.
-Dependencies: WFC_QR2_URL.
+## What it serves
+
+| Endpoint | What |
+| --- | --- |
+| UDP 27901 | NAT negotiation sessions |
+| HTTP `:20204`, `GET /healthz` | Health check, unauthenticated |
+| HTTP `:20204`, protocol and internal paths | Require `WFC_INTERNAL_KEY`; console HTTP reaches this service through wfc-nas |
+| QR2 (`WFC_QR2_URL`) | Receives negotiation results |
+
+## Run
 
 ```sh
-GOWORK=off go test -mod=vendor ./...
-GOWORK=off go vet -mod=vendor ./...
+cp example.env .env   # fill in the existing WFC values
+```
+
+The service runs as the `openpak-wfc-natneg` container from
+`deploy/openpak-wfc-natneg.container`.
+
+## Build
+
+```sh
 docker build -t wfc-natneg .
 ```
 
-Shared wire types, errors, API clients and legacy database helpers are vendored
-from wfc-common. The image and tests build from this repository alone. Refresh
-vendor with the sibling library available after shared contract changes.
-See [the full split guide](https://github.com/openpak/wfc-common/blob/main/docs/service-split.md) for full topology, failure/recovery behavior and
-migration. Protocol tests do not claim real-console gameplay validation.
+## Docs
+
+- [Protocol](docs/protocol.md)
+- [Evidence](docs/evidence.md)
+- [Deploy](docs/deploy.md)
+- [Notes](docs/notes.md)
+
+## Licence
+
+AGPL-3.0-only. See [LICENSE](LICENSE).
