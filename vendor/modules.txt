@@ -10,6 +10,7 @@ github.com/petermattis/goid
 # openpak/wfc-common v0.0.0 => ../wfc-common
 ## explicit; go 1.25.0
 openpak/wfc-common/common
+openpak/wfc-common/httplog
 openpak/wfc-common/logging
 openpak/wfc-common/qr2client
 openpak/wfc-common/service

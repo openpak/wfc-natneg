@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"openpak/wfc-common/common"
+	"openpak/wfc-common/httplog"
 	"openpak/wfc-common/logging"
 	"os"
 	"sync"
@@ -180,6 +181,7 @@ func handleConnection(conn net.PacketConn, addr net.Addr, buffer []byte) {
 
 	// Validate the packet magic
 	if len(buffer) < 12 || !bytes.Equal(buffer[:6], []byte{0xfd, 0xfc, 0x1e, 0x66, 0x6a, 0xb2}) {
+		httplog.Command("natneg", "header", "invalid", time.Now())
 		logging.Error("NATNEG:"+addr.String(), "Invalid packet header")
 		return
 	}
@@ -195,6 +197,9 @@ func handleConnection(conn net.PacketConn, addr net.Addr, buffer []byte) {
 	cookie := binary.BigEndian.Uint32(buffer[8:12])
 
 	moduleName := "NATNEG:" + fmt.Sprintf("%08x/", cookie) + addr.String()
+
+	start, result := time.Now(), "ok"
+	defer func() { httplog.Command("natneg", commandName(command), result, start) }()
 
 	var session *NATNEGSession
 
@@ -221,6 +226,7 @@ func handleConnection(conn net.PacketConn, addr net.Addr, buffer []byte) {
 		mutex.Unlock()
 
 		if session.Version != version {
+			result = "version_mismatch"
 			logging.Error(moduleName, "Version mismatch")
 			return
 		}
@@ -231,6 +237,7 @@ func handleConnection(conn net.PacketConn, addr net.Addr, buffer []byte) {
 
 	switch command {
 	default:
+		result = "unknown"
 		logging.Error(moduleName, "Received unknown command type:", aurora.Cyan(command))
 
 	case NNInitRequest:
@@ -357,4 +364,45 @@ func (client *NATNEGClient) isMapped() bool {
 func createPacketHeader(version byte, command byte, cookie uint32) []byte {
 	header := []byte{0xfd, 0xfc, 0x1e, 0x66, 0x6a, 0xb2, version, command}
 	return binary.BigEndian.AppendUint32(header, cookie)
+}
+
+// commandName is the log name of a NATNEG command byte; unrecognised ones all log as "unknown".
+func commandName(c byte) string {
+	switch c {
+	case NNInitRequest:
+		return "init"
+	case NNInitReply:
+		return "init_ack"
+	case NNErtTestRequest:
+		return "ert_test"
+	case NNErtTestReply:
+		return "ert_ack"
+	case NNStateUpdate:
+		return "state_update"
+	case NNConnectRequest:
+		return "connect"
+	case NNConnectReply:
+		return "connect_ack"
+	case NNConnectPing:
+		return "connect_ping"
+	case NNBackupTestRequest:
+		return "backup_test"
+	case NNBackupTestReply:
+		return "backup_ack"
+	case NNAddressCheckRequest:
+		return "address_check"
+	case NNAddressCheckReply:
+		return "address_reply"
+	case NNNatifyRequest:
+		return "natify"
+	case NNReportRequest:
+		return "report"
+	case NNReportReply:
+		return "report_ack"
+	case NNPreInitRequest:
+		return "preinit"
+	case NNPreInitReply:
+		return "preinit_ack"
+	}
+	return "unknown"
 }
