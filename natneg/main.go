@@ -93,7 +93,9 @@ func StartServer(reload bool) {
 	config := common.GetConfig()
 
 	address := *config.GameSpyAddress + ":27901"
-	conn, err := net.ListenPacket("udp", address)
+	// WFC_PROXY_LISTEN: also take datagrams relayed by wfc-front, framed with the player's real
+	// address (PROXY v2, prds#149); replies to those players go back through the relay.
+	conn, err := common.ListenGameUDP(address, os.Getenv("WFC_PROXY_LISTEN"))
 	if err != nil {
 		panic(err)
 	}
